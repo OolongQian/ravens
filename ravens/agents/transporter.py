@@ -104,6 +104,7 @@ class TransporterAgent:
       writer: a TF summary writer (for tensorboard).
     """
     tf.keras.backend.set_learning_phase(1)
+    # SAY: we can see that, this problem is, predict two poses using image observation.
     img, p0, p0_theta, p1, p1_theta = self.get_sample(dataset)
 
     # Get training losses.

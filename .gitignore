@@ -1,1 +1,7 @@
 /venv/
+*.pkl
+.idea
+__pycache__
+logs
+checkpoints 
+*.zip

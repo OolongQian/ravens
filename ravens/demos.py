@@ -38,49 +38,54 @@ FLAGS = flags.FLAGS
 
 
 def main(unused_argv):
+    # SAY : a PyBullet gym class environment.
+    # Initialize environment and task.
+    env = Environment(
+        FLAGS.assets_root,
+        disp=FLAGS.disp,
+        shared_memory=FLAGS.shared_memory,
+        hz=480)
+    task = tasks.names[FLAGS.task]()
+    task.mode = FLAGS.mode
 
-  # Initialize environment and task.
-  env = Environment(
-      FLAGS.assets_root,
-      disp=FLAGS.disp,
-      shared_memory=FLAGS.shared_memory,
-      hz=480)
-  task = tasks.names[FLAGS.task]()
-  task.mode = FLAGS.mode
+    # SAY: For each task, we have a scripted oracle that performs the task with ground truth information.
+    # Initialize scripted oracle agent and dataset.
+    agent = task.oracle(env)
+    # SAY: this dataset resembles RL convention, storing experiences in episode.
+    dataset = Dataset(os.path.join(FLAGS.data_dir, f'{FLAGS.task}-{task.mode}'))
 
-  # Initialize scripted oracle agent and dataset.
-  agent = task.oracle(env)
-  dataset = Dataset(os.path.join(FLAGS.data_dir, f'{FLAGS.task}-{task.mode}'))
+    # Train seeds are even and test seeds are odd.
+    seed = dataset.max_seed
+    if seed < 0:
+        seed = -1 if (task.mode == 'test') else -2
 
-  # Train seeds are even and test seeds are odd.
-  seed = dataset.max_seed
-  if seed < 0:
-    seed = -1 if (task.mode == 'test') else -2
+    # SAY: experience collection process resembles reinforcement learning.
+    # Collect training data from oracle demonstrations.
+    while dataset.n_episodes < FLAGS.n:
+        print(f'Oracle demonstration: {dataset.n_episodes + 1}/{FLAGS.n}')
+        episode, total_reward = [], 0
+        seed += 2
+        np.random.seed(seed)
+        env.set_task(task)
+        obs = env.reset()
+        info = None
+        reward = 0
+        for _ in range(task.max_steps):
+            act = agent.act(obs, info)
+            episode.append((obs, act, reward, info))
+            obs, reward, done, info = env.step(act)
+            total_reward += reward
+            print(f'Total Reward: {total_reward} Done: {done}')
+            if done:
+                break
+        episode.append((obs, None, reward, info))
 
-  # Collect training data from oracle demonstrations.
-  while dataset.n_episodes < FLAGS.n:
-    print(f'Oracle demonstration: {dataset.n_episodes + 1}/{FLAGS.n}')
-    episode, total_reward = [], 0
-    seed += 2
-    np.random.seed(seed)
-    env.set_task(task)
-    obs = env.reset()
-    info = None
-    reward = 0
-    for _ in range(task.max_steps):
-      act = agent.act(obs, info)
-      episode.append((obs, act, reward, info))
-      obs, reward, done, info = env.step(act)
-      total_reward += reward
-      print(f'Total Reward: {total_reward} Done: {done}')
-      if done:
-        break
-    episode.append((obs, None, reward, info))
+        # SAY: some interesting games may worth being checked out.
+        # Only save completed demonstrations.
+        # TODO(andyzeng): add back deformable logic.
+        if total_reward > 0.99:
+            dataset.add(seed, episode)
 
-    # Only save completed demonstrations.
-    # TODO(andyzeng): add back deformable logic.
-    if total_reward > 0.99:
-      dataset.add(seed, episode)
 
 if __name__ == '__main__':
-  app.run(main)
+    app.run(main)
