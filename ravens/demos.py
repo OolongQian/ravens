@@ -65,19 +65,24 @@ def main(unused_argv):
         print(f'Oracle demonstration: {dataset.n_episodes + 1}/{FLAGS.n}')
         episode, total_reward = [], 0
         seed += 2
+        # SAY: set random seed to reproduce the result.
         np.random.seed(seed)
         env.set_task(task)
         obs = env.reset()
+        obs = env._get_obs(skip_fixed=True)
         info = None
         reward = 0
         for _ in range(task.max_steps):
             act = agent.act(obs, info)
             episode.append((obs, act, reward, info))
             obs, reward, done, info = env.step(act)
+            obs = env._get_obs(skip_fixed=True)
             total_reward += reward
             print(f'Total Reward: {total_reward} Done: {done}')
             if done:
                 break
+        # say: append the final obs as goal, fairly good, perfect!
+        obs = env._get_obs(skip_fixed=True)
         episode.append((obs, None, reward, info))
 
         # SAY: some interesting games may worth being checked out.

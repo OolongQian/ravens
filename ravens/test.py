@@ -98,11 +98,13 @@ def main(unused_argv):
             env.seed(seed)
             env.set_task(task)
             obs = env.reset()
+            obs = env._get_obs(skip_fixed=True)
             info = None
             reward = 0
             for _ in range(task.max_steps):
                 act = agent.act(obs, info, goal)
                 obs, reward, done, info = env.step(act)
+                obs = env._get_obs(skip_fixed=True)
                 total_reward += reward
                 print(f'Total Reward: {total_reward} Done: {done}')
                 if done:

@@ -111,7 +111,7 @@ class Environment(gym.Env):
                 intArgs=[p.AddFileIOAction],
                 physicsClientId=client)
 
-        p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
+        # p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
         p.setPhysicsEngineParameter(enableFileCaching=0)
         p.setAdditionalSearchPath(assets_root)
         p.setAdditionalSearchPath(tempfile.gettempdir())
@@ -146,6 +146,7 @@ class Environment(gym.Env):
             pose[1],
             useFixedBase=fixed_base)
         self.obj_ids[category].append(obj_id)
+        p.stepSimulation()
         return obj_id
 
     # ---------------------------------------------------------------------------
@@ -166,7 +167,7 @@ class Environment(gym.Env):
         p.setGravity(0, 0, -9.8)
 
         # Temporarily disable rendering to load scene faster.
-        p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
+        # p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
 
         pybullet_utils.load_urdf(p, os.path.join(self.assets_root, PLANE_URDF_PATH),
                                  [0, 0, -0.001])
@@ -196,7 +197,7 @@ class Environment(gym.Env):
         self.task.reset(self)
 
         # Re-enable rendering.
-        p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
+        # p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
 
         # SAY: I think Andy Zeng's idea is fairly agile.
 
@@ -375,7 +376,25 @@ class Environment(gym.Env):
         joints[2:] = (joints[2:] + np.pi) % (2 * np.pi) - np.pi
         return joints
 
-    def _get_obs(self):
+    def _get_obs(self, skip_fixed: bool = False, skip_rigid: bool = False):
+        for oid in self.obj_ids['fixed']:
+            visual_data = p.getVisualShapeData(objectUniqueId=oid)
+            rgba = visual_data[0][-1]
+            if skip_fixed:
+                rgba = (rgba[0], rgba[1], rgba[2], 0)
+            else:
+                rgba = (rgba[0], rgba[1], rgba[2], 1)
+            p.changeVisualShape(objectUniqueId=oid, linkIndex=-1, rgbaColor=rgba)
+
+        for oid in self.obj_ids['rigid']:
+            visual_data = p.getVisualShapeData(objectUniqueId=oid)
+            rgba = visual_data[0][-1]
+            if skip_rigid:
+                rgba = (rgba[0], rgba[1], rgba[2], 0)
+            else:
+                rgba = (rgba[0], rgba[1], rgba[2], 1)
+            p.changeVisualShape(objectUniqueId=oid, linkIndex=-1, rgbaColor=rgba)
+
         # Get RGB-D camera image observations.
         obs = {'color': (), 'depth': ()}
         for config in self.agent_cams:
